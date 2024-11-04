@@ -36,8 +36,25 @@ document.querySelectorAll("input").forEach(function(v){
   })
 })
 
+document.getElementById('showoptions').addEventListener('click', function(e){
+  function closePopup() {
+    window.close();
+    document.body.style.opacity = 0;
+    setTimeout(function() { history.go(0); }, 300);
+  }
+  closePopup()
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('options.html')
+  });
+})
 
 
-
+document.getElementById('ast_page')?.addEventListener('click', function(){
+  var temp = chrome.runtime.getURL('astexplorer_babel.html')
+  chrome.tabs.create({
+    url: temp
+  });
+  
+})
 
 

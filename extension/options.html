@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fchrome配置页面</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <style>
+    .act{
+        background-color: #cbaeae;
+    }
+    </style>
+
+</head>
+<body>
+    <nav id="nav">
+        <ul>
+            <button class="act">Fchrome hook 配置</button>
+        </ul>
+    </nav>
+    <div id="container">
+        <section class="tab">
+            <div>
+                  <label ><input type="checkbox" data-key="config-proxy-hook">是否开启proxy代理总开关</label> 
+                  <br/>
+                    <button id="proxy_all">是否代理所有对象</button>
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-window">是否代理window</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-screen">是否代理screen</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-document">是否代理document</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-navigator">是否代理navigator</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-history">是否代理history</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-sessionStorage">是否代理sessionStorage</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-localStorage">是否代理localStorage</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-location">是否代理location（不建议代理 代理后调用某些方法会报错）</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-performance">是否代理performance</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-indexedDB">是否代理indexedDB</label> 
+                    <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-crypto">是否代理crypto</label> 
+                    <br/>
+
+                  <label ><input type="checkbox" data-key="config-iframe-proxy-hook">是否开启iframe代理（目前只能hook iframe.contentWindow和iframe.contentDocument iframe里面的对象hook还没实现）</label> 
+                  <br/>
+                  <label ><input type="checkbox" data-key="config-function-proxy-hook">是否开启全局function代理</label> 
+                  <br/>
+                  <label ><input type="checkbox" data-key="config-hook-console">hook-console（使用 dtavm.log 替换 console.log 并将 console 的属性都设置为空函数）</label> 
+                  <br/>
+
+                  <label ><input type="checkbox" data-key="config-hook-random">是否启用启用下面四种调试功能（用于固定随机性，便于对比调试）</label> 
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-random-freeze">config-hook-random（让 random 函数固定返回 0.5）</label> 
+                  <br/>
+                  <label style="margin-left: 20px">
+                    <input type="checkbox" data-key="config-hook-time-freeze">config-hook-time（时间函数返回的值固定成一个数字）
+                    <input style="width: 150px; height: 12px" type="text" data-key="config-hook-time-freeze-number" id="show_now">
+                    <button style="padding: 0px; height: 20px" id="get_now">获取当前时间戳用于固定时间 (注意！！！由于固定时间可能会影响到cookie设置，所以请生成一个当前时间戳再行使用)</button>
+                  </label> 
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-time-performance">config-hook-performance-now（这个时间函数返回的值固定成一个数字）</label> 
+                  <br/>
+                  <!-- <div style="border: 1px solid red; margin: 1px">
+                    <div style="margin: 1px; color: red">
+                      此处的配置会影响后面的全部挂钩操作
+                    </div>
+                    <div style="margin: 1px">
+                      <label >通过正则匹配URL实现日志输出仅针对你关心的js文件</label> 
+                    </div>
+                    <div style="margin: 1px">
+                      <input style="width: 98%" type="text" data-key="config-hook-regexp-url">
+                    </div>
+
+                  </div> -->
+
+                  <label ><input type="checkbox" data-key="config-hook-encrypt-normal">是否启用下面几个加解密函数挂钩输出功能</label> 
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-JSON.parse">hook-JSON.parse</label> 
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-JSON.stringify">hook-JSON.stringify</label> 
+                  <br/>
+                  <!-- <label ><input type="checkbox" data-key="config-hook-domobj">是否启用挂钩 DOM 对象的原型的功能调试输出</label>
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-domobj-get">hook-domobj-显示get输出</label> 
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-domobj-set">hook-domobj-显示set输出</label> 
+                  <br/>
+                  <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-domobj-func">hook-domobj-显示func输出</label>
+                  <br/> -->
+            </div>
+            <!-- <HR>
+            <div>左侧两列为常用挂钩，建议常开</div>
+            <HR>
+            <div id="getsets_0" style="float: left; width: 300px"></div>
+            <div id="funcs_0" style="float: left; width: 300px"></div>
+            <div id="getsets_1" style="float: left"></div>
+            <div id="funcs_1" style="float: left"></div> -->
+        </section>
+
+    </div>
+    <script src="tools/jquery.min.js"></script>
+    <script src="options.js"></script>
+    <!-- <script src="./tools/common.js"></script>
+    <script src="./tools/sub_logger.js"></script>
+    <script src="./tools/_config_hook_list.js"></script>
+    
+    <script src="tools/model_funcs.js"></script>
+    <script src="tools/babel_asttool.js"></script>
+    <script src="tools/uglify_es.js"></script>
+    <script src="tools/terser.js"></script>
+    <script src="tools/env_maker.js"></script>
+    <script src="tools/btn_utils.js"></script>
+    <script src="tools/js_obfuscator.js"></script>
+    <script src="tools/aline_js.js"></script>
+    <script src="tools/cryptojs.js"></script>
+    <script src="tools/myinject_enc.js"></script>
+    <script src="tools/mod_code_getter.js"></script> -->
+</body>
+</html>
