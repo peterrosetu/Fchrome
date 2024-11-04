@@ -91,6 +91,8 @@
           - ![screenshot](imgs/function2.png)
           - 效果展示
             - ![screenshot](imgs/function3.png)
+        - #### 插件配置页面
+          - ![screenshot](imgs/extension7.png) 
         - ### 编译成品
             - [目前只有Win版本](https://github.com/daisixuan/Fchrome/releases)
                 - 便携式
