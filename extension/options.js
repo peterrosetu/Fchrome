@@ -66,6 +66,11 @@ document.querySelectorAll("input").forEach(function(v){
       })
       sub_logger()
     }
+    if (v.type == 'text' || v.type == 'password'){
+      chrome.storage.local.set({
+        [e.target.dataset.key]: e.target.value
+      })
+    }
   })
 })
 

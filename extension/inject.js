@@ -35,12 +35,27 @@ var hookers = [
   "config-proxy-hook-performance",
   "config-proxy-hook-indexedDB",
   "config-proxy-hook-crypto",
+  "config-hook-regexp-url",
 ]
 
 function injectfunc(e, window) {
   var dta_parse = JSON.parse
   var dta_stringify = JSON.stringify
+  var dta_Error = Error
 
+  if ((e["config-hook-regexp-url"] || '').trim()){
+    console.log('[*] 配置了只收集对某个js路径才输出的配置（如出现控制台不输出hook，注意配置该项为空）:', e["config-hook-regexp-url"])
+    var expurl = RegExp((e["config-hook-regexp-url"] || '').trim())
+    RegExp.prototype.dta_test = RegExp.prototype.test
+    String.prototype.dta_split = String.prototype.split
+    dtavm.log = function(){
+      var stack_list = dta_Error().stack.dta_split('\n').slice(3)
+      // expurl.dta_test(expstr=dta_Error().stack.dta_split('\n'))
+      if (stack_list.some(stack => expurl.dta_test(stack))){
+        dtavm.rawlog.apply(this, arguments)
+      }
+    }
+  }
 
   dtavm.proxy_map = {
     window: e["config-proxy-hook-window"]?dtavm.proxy(window_jyl, "window"):window_jyl,

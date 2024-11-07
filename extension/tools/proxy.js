@@ -4,8 +4,8 @@ dtavm.proxy_start = function proxy_start() {
         proxy_map: {},
         iframe_proxy_map: {},
     }
-    rawlog = console.log
-    dtavm.log = rawlog
+    dtavm.rawlog = console.log
+    dtavm.log = dtavm.rawlog
     delete rawlog
         // 保护伪造函数toString
         ; (() => {
@@ -115,7 +115,7 @@ dtavm.proxy_start = function proxy_start() {
                         if (WatchName === "window.console") {
                         }
                         else if (!target.name) {
-                            dtavm.log(`[${WatchName}] apply not name function, argArray is `, argArray, `result is `, data);
+                            dtavm.log(`[${WatchName}] apply not name function, argArray is `, argArray, `result is `, result);
                         }
                         else if (result instanceof Promise) {
                             result.then((data) => {
