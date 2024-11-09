@@ -106,24 +106,24 @@
                 - 安装包
                     - mini_installer.exe 直接安装(适用于有管理员权限的电脑)
         - ### Tips
-            - 碰到报错的方法或无法打印的对象(报错的) 手动在/extension/tools/proxy.js代码中进行过滤 可以提Issues
+            - 碰到报错的方法或无法打印的对象(报错的) 手动在/extension/tools/proxy.js代码中进行过滤
             - 如果需要手动注入时:安装油猴会导致上述最早注入的时机不好找，因为会先加载油猴的环境并没有进入到目标代码跑的环境
             - 手动注入的proxy.js没有更新 最好使用插件进行hook 如果无法满足最早时机 请手动更新一下
             - 结合 https://github.com/cilame/v_jstools 中的对象原型链getset hook 一起分析会有奇效 可以同时安装使用2个插件
         
         - ### 建议
-          - 问题中可以提还需要监控哪些全局对象（原型链的监控v_jstools已经写了很多）作者有空会去改 随缘发布新版
+          - 遇到报错和bug可以提Issues 看到会回复解决
 
 - # 后续更新方向
   - todo
     - ~~js hook的代码制作成chrome插件一键启动！~~
-    - 直接内置v_jstools的监控避免冲突（快完成了 差一个原型链监控）
+    - ~~直接内置v_jstools的监控避免冲突~~
     - 一键导出调用的环境 一键补环境 (耗时较久 难肝)
     - 自定义console.log 并去掉原始的console.log 防止控制台/cdp检测 和 console.log被抹去或被console.clear清掉日志（目前通过js hook方式去实现 暂不更新）
     - 更新其他全局对象监控
 
-- # 联系我们
-    - #### 作者v: lenganlan
+- # 联系作者&&商务合作
+  - ## wx: lenganlan
 
 - # 感谢支持!!
 
