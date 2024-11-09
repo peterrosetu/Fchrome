@@ -110,7 +110,13 @@ dtavm.proxy_start = function proxy_start() {
                     if (this.target_obj) {
                         thisArg = this.target_obj
                     }
-                    let result = Reflect.apply(target, thisArg, argArray)
+                    try{
+                        var result = Reflect.apply(target, thisArg, argArray)
+                    }catch(e){
+                        dtavm.log(`[${WatchName}] apply function name is [${target.name}], argArray is `, argArray, `error is `, e);
+                        throw e;
+                    }
+                    
                     if (target.name !== "toString") {
                         if (WatchName === "window.console") {
                         }
@@ -130,7 +136,12 @@ dtavm.proxy_start = function proxy_start() {
                     return result
                 },
                 construct(target, argArray, newTarget) {
-                    var result = Reflect.construct(target, argArray, newTarget)
+                    try{
+                        var result = Reflect.construct(target, argArray, newTarget)
+                    }catch(e){
+                        dtavm.log(`[${WatchName}] construct function name is [${target.name}], argArray is `, argArray, `error is `, e);
+                        throw e;
+                    }
                     dtavm.log(`[${WatchName}] construct function name is [${target.name}], argArray is `, argArray, `result is `, result);
                     return result;
                 }
@@ -160,11 +171,11 @@ dtavm.proxy_start = function proxy_start() {
                     //     return result
                     // }
                     // // 确保 document.location == window.location = true
-                    // if ((WatchName === "window" || WatchName === "document") && propKey === "location"){
-                    //     result = dtavm.proxy_map["location"]
-                    //     dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
-                    //     return result
-                    // }
+                    if ((WatchName === "window" || WatchName === "document") && propKey === "location"){
+                        result = dtavm.proxy_map["location"]
+                        dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
+                        return result
+                    }
                     result = target[propKey]
                     if (result instanceof Object) {
                         if (typeof result === "function") {
