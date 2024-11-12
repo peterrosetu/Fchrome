@@ -99,6 +99,10 @@
           - ![screenshot](imgs/function2.png)
           - 效果展示
             - ![screenshot](imgs/function3.png)
+        - #### 插件一键导出调用环境 (实验中)
+          ![screenshot](imgs/output1.png)
+          ![screenshot](imgs/output2.png)
+          ![screenshot](imgs/output3.png) 
         - ### 编译成品
             - [目前只有Win版本](https://github.com/daisixuan/Fchrome/releases)
                 - 便携式
