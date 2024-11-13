@@ -115,6 +115,7 @@ dtavm.proxy_start = function proxy_start(e) {
     }
 
     dtavm.rawlog = console.log
+    dtavm.rawclear = console.clear
     dtavm.log = dtavm.rawlog
     delete rawlog
         // 保护伪造函数toString

@@ -629,6 +629,7 @@ chrome.storage.local.get(hookers, function (result) {
       inject_script(dtavm.function_proxy.toString() + "\nfunction_proxy()")
     }
     inject_script("dtavm.log_env_cache = {}")
+    //inject_script("dtavm.rawclear()")
   } else {
     console.log("不启动代理器替换全局对象!")
   }
