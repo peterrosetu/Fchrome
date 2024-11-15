@@ -129,6 +129,7 @@ var hookers = [
   "config-hook-domobj-set",
   "config-hook-domobj-func",
   "config-log-hook",
+  "config-hook-exclude-func"
 ]
 
 function add_config_hook(input) {
@@ -147,7 +148,7 @@ function injectfunc(e, window) {
   var origslice = [].slice
 
   if ((e["config-hook-regexp-url"] || '').trim()) {
-    console.log('[*] 配置了只收集对某个js路径才输出的配置（如出现控制台不输出hook，注意配置该项为空）:', e["config-hook-regexp-url"])
+    console.log('[*] 配置了只收集对某个js路径才输出的配置:', e["config-hook-regexp-url"])
     var expurl = RegExp((e["config-hook-regexp-url"] || '').trim())
     RegExp.prototype.dta_test = RegExp.prototype.test
     String.prototype.dta_split = String.prototype.split
@@ -611,22 +612,21 @@ var code_hookdom;
 chrome.storage.local.get(hookers, function (result) {
   if (result["config-proxy-hook"]) {
     console.log("启动代理器替换全局对象!")
-    if (result["config-env-output"]){
-      debuggee;
-    }
 
-    inject_script(dtavm.proxy_start.toString() + `\nproxy_start(${JSON.stringify(result)})`)
-
+    // inject_script(dtavm.proxy_start.toString() + `\nproxy_start(${JSON.stringify(result)})`)
+    inject_script(`(${dtavm.proxy_start})(${JSON.stringify(result)})`)
     var replacer_injectfunc = (injectfunc + '').replace('$domobj_placeholder', make_domhooker_funcs())
 
     if (result["config-iframe-proxy-hook"]) {
       console.log("启动iframe代理器!")
-      inject_script(dtavm.iframe_proxy_start.toString() + "\niframe_proxy_start()")
+      // inject_script(dtavm.iframe_proxy_start.toString() + "\niframe_proxy_start()")
+      inject_script(`(${dtavm.iframe_proxy_start})()`)
     }
     inject_script(code_hookdom = `(${replacer_injectfunc})(${JSON.stringify(result)},window)`);
     if (result["config-function-proxy-hook"]) {
       console.log("启动function代理器!")
-      inject_script(dtavm.function_proxy.toString() + "\nfunction_proxy()")
+      // inject_script(dtavm.function_proxy.toString() + "\nfunction_proxy()")
+      inject_script(`(${dtavm.function_proxy})()`)
     }
     inject_script("dtavm.log_env_cache = {}")
     //inject_script("dtavm.rawclear()")

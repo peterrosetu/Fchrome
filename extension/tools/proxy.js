@@ -4,8 +4,9 @@ dtavm.proxy_start = function proxy_start(e) {
         proxy_map: {},
         iframe_proxy_map: {},
         log_env_cache: {},
-        log_env: function () { }
+        log_env: function () {},
     }
+    var unhook_func_list = [];
 
     // todo 在写环境的时候 对undefined的属性 并没有in对象中的进行剔除 （目前是在has代理器中判断 如果判断为false则去删除）
     // todo 没in在对象中 case del delete对象
@@ -112,6 +113,9 @@ dtavm.proxy_start = function proxy_start(e) {
                     break;
             }
         }
+        if ((e["config-hook-exclude-func"] || '').trim()){
+            unhook_func_list = (e["config-hook-exclude-func"] || '').trim().split(",");
+        }
     }
 
     dtavm.rawlog = console.log
@@ -163,6 +167,9 @@ dtavm.proxy_start = function proxy_start(e) {
                     || split_name[0] === "top" || split_name[0] === "frames" || split_name[0] === "parent") {
                     var split_name_list = getSubstrings(split_name)
                     for (let i = 0; i < split_name_list.length; i++) {
+                        if (unhook_func_list.includes(split_name_list[i])){
+                            return result;
+                        }
                         if (dtavm.proxy_map.hasOwnProperty(split_name_list[i])) {
                             return dtavm.proxy_map[split_name_list[i]]
                         }
@@ -171,6 +178,9 @@ dtavm.proxy_start = function proxy_start(e) {
                     dtavm.proxy_map[WatchName] = proxy_res
                     return proxy_res
                 }
+            }
+            if (unhook_func_list.includes(WatchName)){
+                return result;
             }
             // 单次代理
             if (dtavm.proxy_map.hasOwnProperty(WatchName)) {
@@ -458,8 +468,9 @@ dtavm.iframe_proxy_start = function iframe_proxy_start() {
 }
 dtavm.function_proxy = function function_proxy() {
     // todo hook 这种 new (Function.bind.apply(X, J))
-    let filter_func_list = ["function_proxy", "iframe_proxy_start", "proxy_start", "Function", "eval", "Object", "Array", "Number", "parseFloat", "parseInt", "Boolean", "String", "Symbol", "Date", "Promise", "RegExp", "Error", "AggregateError", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "ArrayBuffer", "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigUint64Array", "BigInt64Array", "DataView", "Map", "BigInt", "Set", "WeakMap", "WeakSet", "Proxy", "FinalizationRegistry", "WeakRef", "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent", "escape", "unescape", "isFinite", "isNaN", "SharedArrayBuffer", "VMError", "Buffer"];
-    const globalFunctions = Reflect.ownKeys(globalThis).filter((key) => {
+    let filter_func_list = ["Function", "eval", "Object", "Array", "Number", "parseFloat", "parseInt", "Boolean", "String", "Symbol", "Date", "Promise", "RegExp", "Error", "AggregateError", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "ArrayBuffer", "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigUint64Array", "BigInt64Array", "DataView", "Map", "BigInt", "Set", "WeakMap", "WeakSet", "Proxy", "FinalizationRegistry", "WeakRef", "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent", "escape", "unescape", "isFinite", "isNaN", "SharedArrayBuffer", "VMError", "Buffer"];
+    const all_func = Reflect.ownKeys(globalThis)
+    const globalFunctions = all_func.filter((key) => {
         var result = globalThis[key];
         if (typeof result === 'function' && !filter_func_list.includes(key)) {
             eval(`${key}=window.${key}`)

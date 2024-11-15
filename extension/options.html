@@ -52,6 +52,15 @@
                   <br/>
                   <label ><input type="checkbox" data-key="config-function-proxy-hook">是否开启全局function代理</label> 
                   <br/>
+
+                    <div style="margin-left: 20px">
+                      <label >输入不需要hook的全局函数，多个函数用英文逗号分开(,)</label> 
+                    </div>
+                    <div style="margin-left: 20px">
+                      <input style="width: 98%" type="text" data-key="config-hook-exclude-func">
+                    </div>
+
+
                   <label ><input type="checkbox" data-key="config-hook-console">hook-console（使用 dtavm.log 替换 console.log 并将 console 的属性都设置为空函数）</label> 
                   <br/>
 
