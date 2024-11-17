@@ -359,7 +359,8 @@ dtavm.proxy_start = function proxy_start(e) {
                         target[propKey] = value;
                     }
                     //dtavm.log_env("set", WatchName, propKey, value)
-                    return value;
+                    // 如果对象是null, false 会报错trap returned falsish
+                    return true;
                 },
                 has(target, propKey) {
                     var result = Reflect.has(target, propKey);
