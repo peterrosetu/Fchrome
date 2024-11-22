@@ -313,6 +313,9 @@ dtavm.proxy_start = function proxy_start(e) {
                         return result
                     }
                     result = target[propKey]
+                    if (WatchName === "window" && unhook_func_list.includes(propKey)){
+                        return result;
+                    }
                     dtavm.log_env("get", WatchName, propKey, result)
                     if (WatchName === "document" && propKey === "all") {
                         dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
