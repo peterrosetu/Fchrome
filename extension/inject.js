@@ -149,6 +149,7 @@ function injectfunc(e, window) {
 
   if ((e["config-hook-regexp-url"] || '').trim()) {
     console.log('[*] 配置了只收集对某个js路径才输出的配置:', e["config-hook-regexp-url"])
+    // todo 改成匹配多个js文件打印
     var expurl = RegExp((e["config-hook-regexp-url"] || '').trim())
     RegExp.prototype.dta_test = RegExp.prototype.test
     String.prototype.dta_split = String.prototype.split
@@ -244,7 +245,7 @@ function injectfunc(e, window) {
       $domobj_placeholder
     }
 
-    globalThis = dtavm.proxy(window_jyl, "globalThis")
+    globalThis = dtavm.proxy_map["window"]
     Object.defineProperties(globalThis, {
       'window': {
         configurable: false,
@@ -626,7 +627,7 @@ chrome.storage.local.get(hookers, function (result) {
     if (result["config-function-proxy-hook"]) {
       console.log("启动function代理器!")
       // inject_script(dtavm.function_proxy.toString() + "\nfunction_proxy()")
-      inject_script(`(${dtavm.function_proxy})()`)
+      inject_script(`(${dtavm.function_proxy})(${JSON.stringify(result)})`)
     }
     inject_script("dtavm.log_env_cache = {}")
     //inject_script("dtavm.rawclear()")

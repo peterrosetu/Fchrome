@@ -312,8 +312,12 @@ dtavm.proxy_start = function proxy_start(e) {
                         dtavm.log_env("get", WatchName, propKey, result)
                         return result
                     }
+                    var propKeyname = typeof propKey == "symbol" ? propKey.toString() : propKey
                     result = target[propKey]
                     if (WatchName === "window" && unhook_func_list.includes(propKey)){
+                        if (typeof result == "function"){
+                            return result.bind(window_jyl);
+                        }
                         return result;
                     }
                     dtavm.log_env("get", WatchName, propKey, result)
@@ -324,16 +328,18 @@ dtavm.proxy_start = function proxy_start(e) {
                     if (result instanceof Object) {
                         if (typeof result === "function") {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `] , it is function`)
-                            return check_proxy(`${WatchName}.${propKey}`, result, getMethodHandler(WatchName, target))
+                            return check_proxy(`${WatchName}.${propKeyname}`, result, getMethodHandler(WatchName, target))
                         }
                         else {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
-                            if (propKey == "location" || result instanceof Array) {
-                                // 不代理 location 和 Array（因为无法用代理器覆盖他的get方法）
+                            if (propKey == "location" || result instanceof Array 
+                                || result instanceof NodeList || result instanceof HTMLAllCollection 
+                                || result instanceof PluginArray || result instanceof HTMLCollection) {
+                                // 不代理 location 和 类似Array类型例如 NodeList HTMLAllCollection PluginArray（因为无法用代理器覆盖他的get方法）
                                 return result
                             }
                         }
-                        return check_proxy(`${WatchName}.${propKey}`, result, getObjhandler(`${WatchName}.${propKey}`))
+                        return check_proxy(`${WatchName}.${propKeyname}`, result, getObjhandler(`${WatchName}.${propKeyname}`))
                     } else if (WatchName.includes("contentWindow_") || WatchName.includes("contentDocument_")) {
                         // 这里不用instanceof Object 因为iframe里面的Object不同于主环境的Object 会返回false
                         if (typeof result == "object") {
@@ -341,10 +347,10 @@ dtavm.proxy_start = function proxy_start(e) {
                             if (!result || propKey == "location" || result instanceof Array) {
                                 return result;
                             }
-                            return check_iframe_proxy(`${WatchName}.${propKey}`, result, getObjhandler(`${WatchName}.${propKey}`))
+                            return check_iframe_proxy(`${WatchName}.${propKeyname}`, result, getObjhandler(`${WatchName}.${propKeyname}`))
                         } else if (typeof result == "function") {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `] , it is function`)
-                            return check_iframe_proxy(`${WatchName}.${propKey}`, result, getMethodHandler(WatchName, target))
+                            return check_iframe_proxy(`${WatchName}.${propKeyname}`, result, getMethodHandler(WatchName, target))
                         }
                     }
                     dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
@@ -470,13 +476,17 @@ dtavm.iframe_proxy_start = function iframe_proxy_start() {
     dtavm.func_set_native(Object.getOwnPropertyDescriptors(HTMLIFrameElement.prototype)["contentWindow"].get, "contentWindow");
     dtavm.func_set_native(Object.getOwnPropertyDescriptors(HTMLIFrameElement.prototype)["contentDocument"].get, "contentDocument");
 }
-dtavm.function_proxy = function function_proxy() {
+dtavm.function_proxy = function function_proxy(e) {
     // todo hook 这种 new (Function.bind.apply(X, J))
+    var unhook_func_list;
+    if ((e["config-hook-exclude-func"] || '').trim()){
+        unhook_func_list = (e["config-hook-exclude-func"] || '').trim().split(",");
+    }
     let filter_func_list = ["Function", "eval", "Object", "Array", "Number", "parseFloat", "parseInt", "Boolean", "String", "Symbol", "Date", "Promise", "RegExp", "Error", "AggregateError", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "ArrayBuffer", "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigUint64Array", "BigInt64Array", "DataView", "Map", "BigInt", "Set", "WeakMap", "WeakSet", "Proxy", "FinalizationRegistry", "WeakRef", "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent", "escape", "unescape", "isFinite", "isNaN", "SharedArrayBuffer", "VMError", "Buffer"];
     const all_func = Reflect.ownKeys(globalThis)
     const globalFunctions = all_func.filter((key) => {
         var result = globalThis[key];
-        if (typeof result === 'function' && !filter_func_list.includes(key)) {
+        if (typeof result === 'function' && !filter_func_list.includes(key) && !filter_func_list.includes(unhook_func_list)) {
             eval(`${key}=window.${key}`)
             return key;
         }
@@ -484,3 +494,6 @@ dtavm.function_proxy = function function_proxy() {
     dtavm.log("hook 全局函数列表", globalFunctions)
 
 }
+
+
+// todo 延时注入
