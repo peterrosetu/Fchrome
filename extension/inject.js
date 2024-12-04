@@ -123,6 +123,7 @@ var hookers = [
   "config-proxy-hook-performance",
   "config-proxy-hook-indexedDB",
   "config-proxy-hook-crypto",
+  "config-proxy-hook-Intl",
   "config-hook-regexp-url",
   "config-hook-domobj",
   "config-hook-domobj-get",
@@ -174,6 +175,7 @@ function injectfunc(e, window) {
     performance: e["config-proxy-hook-performance"] ? dtavm.proxy(performance_jyl, "performance") : performance_jyl,
     indexedDB: e["config-proxy-hook-indexedDB"] ? dtavm.proxy(indexedDB_jyl, "indexedDB") : indexedDB_jyl,
     crypto: e["config-proxy-hook-crypto"] ? dtavm.proxy(crypto_jyl, "crypto") : crypto_jyl,
+    Intl: e["config-proxy-hook-Intl"] ? dtavm.proxy_map.window.Intl : Intl,
   }
 
   if (e["config-hook-console"]) {
@@ -378,6 +380,12 @@ function injectfunc(e, window) {
           return dtavm.proxy_map["crypto"]
         },
         set: undefined
+      },
+      'Intl': {
+        configurable: true,
+        enumerable: false,
+        value: dtavm.proxy_map["Intl"],
+        writable: true
       },
     })
 
