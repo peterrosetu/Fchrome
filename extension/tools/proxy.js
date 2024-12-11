@@ -113,9 +113,9 @@ dtavm.proxy_start = function proxy_start(e) {
                     break;
             }
         }
-        if ((e["config-hook-exclude-func"] || '').trim()){
-            unhook_func_list = (e["config-hook-exclude-func"] || '').trim().split(",");
-        }
+    }
+    if ((e["config-hook-exclude-func"] || '').trim()){
+        unhook_func_list = (e["config-hook-exclude-func"] || '').trim().split(",");
     }
 
     dtavm.rawlog = console.log
@@ -305,9 +305,55 @@ dtavm.proxy_start = function proxy_start(e) {
                     //     }
                     //     return result
                     // }
-                    // // 确保 document.location == window.location = true
-                    if ((WatchName === "window" || WatchName === "document") && propKey === "location") {
-                        result = dtavm.proxy_map["location"]
+                    if ((WatchName.includes("window") || WatchName.includes("globalThis")
+                        || WatchName.includes("self") || WatchName.includes("top")
+                        || WatchName.includes("frames") || WatchName.includes("parent")) &&
+                        (propKey === "globalThis" || propKey === "self" || propKey === "top"
+                            || propKey === "frames" || propKey === "parent" || propKey === "window")) {
+                        if (WatchName.includes(".")){
+                            var split_name = WatchName.split(".")
+                            if (split_name.slice(0, split_name.length - 1).every((value)=>{
+                                return value === "window" || value === "globalThis" || value === "self"
+                                    || value === "top" || value === "frames" || value === "parent";
+                            })){
+                                var last_name = split_name[split_name.length - 1]
+                                if (last_name === "window" || last_name === "globalThis" || last_name === "self"
+                                    || last_name === "top" || last_name === "frames" || last_name === "parent"){
+                                    result = dtavm.proxy_map["window"]
+                                }
+                            }else{
+                                result = target[propKey]
+                            }
+                        }else {
+                            result = dtavm.proxy_map["window"]
+                        }
+                        dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
+                        dtavm.log_env("get", WatchName, propKey, result)
+                        return result
+                    }
+                    else if ((WatchName.includes("window") || WatchName.includes("document") || WatchName.includes("globalThis")
+                        || WatchName.includes("self") || WatchName.includes("top")
+                        || WatchName.includes("frames") || WatchName.includes("parent")) && propKey === "location") {
+                        // 处理这种情况window.window.location
+                        // 当WatchName含有.的时候 split成数组 并且判断是否都为window 或者最后一个是document前面都是window
+                        if (WatchName.includes(".")){
+                            var split_name = WatchName.split(".")
+                            if (split_name.slice(0, split_name.length - 1).every((value)=>{
+                                return value === "window" || value === "globalThis" || value === "self"
+                                    || value === "top" || value === "frames" || value === "parent";
+                            })){
+                                var last_name = split_name[split_name.length - 1]
+                                if (last_name === "window" || last_name === "document"
+                                    || last_name === "globalThis" || last_name === "self"
+                                    || last_name === "top" || last_name === "frames" || last_name === "parent"){
+                                    result = dtavm.proxy_map["location"]
+                                }
+                            }else{
+                                result = target[propKey]
+                            }
+                        }else {
+                            result = dtavm.proxy_map["location"]
+                        }
                         dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
                         dtavm.log_env("get", WatchName, propKey, result)
                         return result
