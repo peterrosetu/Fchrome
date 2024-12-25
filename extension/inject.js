@@ -147,7 +147,6 @@ function injectfunc(e, window) {
   var dta_stringify = JSON.stringify
   var dta_Error = Error
   var origslice = [].slice
-
   if ((e["config-hook-regexp-url"] || '').trim()) {
     console.log('[*] 配置了只收集对某个js路径才输出的配置:', e["config-hook-regexp-url"])
     // todo 改成匹配多个js文件打印
@@ -232,6 +231,7 @@ function injectfunc(e, window) {
       }
       dtavm.func_set_native(JSON.parse)
     }
+  }
     if (e["config-hook-JSON.stringify"]) {
       JSON.stringify = function stringify() {
         var res = dta_stringify.apply(this, arguments)
@@ -422,7 +422,7 @@ function injectfunc(e, window) {
 
   }
 
-}
+
 
 async function copy_env(env){
   class ClipboardUtils {
