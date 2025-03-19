@@ -1,10 +1,125 @@
 dtavm = {}
-dtavm.proxy_start = function proxy_start() {
+dtavm.proxy_start = function proxy_start(e) {
     dtavm = {
         proxy_map: {},
         iframe_proxy_map: {},
+        log_env_cache: {},
+        log_env: function () {},
     }
+    var unhook_func_list = [];
+
+    // todo 在写环境的时候 对undefined的属性 并没有in对象中的进行剔除 （目前是在has代理器中判断 如果判断为false则去删除）
+    // todo 没in在对象中 case del delete对象
+    if (e["config-log-hook"]) {
+        var expurl;
+        var dta_Error = Error;
+        if ((e["config-hook-regexp-url"] || '').trim()) {
+            expurl = RegExp((e["config-hook-regexp-url"] || '').trim())
+            RegExp.prototype.dta_test = RegExp.prototype.test
+            String.prototype.dta_split = String.prototype.split
+        }
+        dtavm.log_env = function (call_type, WatchName, key, result, call_type2) {
+            if (expurl){
+                var stack_list = dta_Error().stack.dta_split('\n').slice(3)
+                if (!stack_list.some(stack => expurl.dta_test(stack))) {
+                    return;
+                }
+            }
+            var now_obj;
+            if (call_type !== "prototype") {
+                var split_name_list = WatchName.split(".")
+                for (let i = 0; i < split_name_list.length; i++) {
+                    if (!dtavm.log_env_cache.hasOwnProperty(split_name_list[i])) {
+                        if (!now_obj) {
+                            dtavm.log_env_cache[split_name_list[i]] = {}
+                        } else {
+                            now_obj[split_name_list[i]] = {}
+                        }
+                    }
+                    if (now_obj) {
+                        now_obj = now_obj[split_name_list[i]]
+                    } else {
+                        now_obj = dtavm.log_env_cache[split_name_list[i]]
+                    }
+                }
+            } else {
+                if (!dtavm.log_env_cache.hasOwnProperty("prototype")) {
+                    dtavm.log_env_cache["prototype"] = {}
+                }
+                if (!dtavm.log_env_cache["prototype"].hasOwnProperty(WatchName)) {
+                    dtavm.log_env_cache["prototype"][WatchName] = {}
+                }
+                now_obj = dtavm.log_env_cache["prototype"][WatchName]
+            }
+            switch (call_type) {
+                case "func":
+                    // todo 记录入参出参
+                    // now_obj[key] = function(){}
+                    break;
+                case "get":
+                    if (typeof result == "function") {
+                        now_obj[key] = function () { }
+                    } else if (typeof result == "object") {
+                        if (result instanceof Array) {
+                            now_obj[key] = []
+                        } else if (result == null) {
+                            now_obj[key] = null
+                        } else {
+                            now_obj[key] = {}
+                        }
+                    } else if (result instanceof Object) {
+                        now_obj[key] = {}
+                    } else {
+                        now_obj[key] = result
+                    }
+                    break;
+                case "set":
+                    break;
+                case "del":
+                    delete now_obj[key]
+                    break;
+                case "prototype":
+                    switch (call_type2) {
+                        case "get":
+                            if (typeof result == "function") {
+                                now_obj[key] = function () { }
+                            } else if (typeof result == "object") {
+                                if (result instanceof Array) {
+                                    now_obj[key] = []
+                                } else if (result == null) {
+                                    now_obj[key] = null
+                                } else {
+                                    now_obj[key] = {}
+                                }
+                            } else if (result instanceof Object) {
+                                now_obj[key] = {}
+                            } else {
+                                now_obj[key] = result
+                            }
+                            break;
+                        case "set":
+                            break;
+                        case "func":
+                            // todo 记录入参出参
+                            now_obj[key] = function () { }
+                            break;
+                        default:
+                            dtavm.log("未知参数2", call_type, WatchName, key, result, call_type2);
+                            break;
+                    }
+                    break;
+                default:
+                    dtavm.log("未知参数", call_type, WatchName, key, result);
+                    break;
+            }
+        }
+    }
+    if ((e["config-hook-exclude-func"] || '').trim()){
+        unhook_func_list = (e["config-hook-exclude-func"] || '').trim().split(",");
+    }
+
     dtavm.rawlog = console.log
+    dtavm.rawclear = console.clear
     dtavm.log = dtavm.rawlog
     delete rawlog
         // 保护伪造函数toString
@@ -43,7 +158,7 @@ dtavm.proxy_start = function proxy_start() {
 
         function check_proxy(WatchName, result, handler) {
             var proxy_res;
-            
+
             if (WatchName.includes(".")) {
                 // 嵌套代理
                 var split_name = WatchName.split(".")
@@ -52,6 +167,9 @@ dtavm.proxy_start = function proxy_start() {
                     || split_name[0] === "top" || split_name[0] === "frames" || split_name[0] === "parent") {
                     var split_name_list = getSubstrings(split_name)
                     for (let i = 0; i < split_name_list.length; i++) {
+                        if (unhook_func_list.includes(split_name_list[i])){
+                            return result;
+                        }
                         if (dtavm.proxy_map.hasOwnProperty(split_name_list[i])) {
                             return dtavm.proxy_map[split_name_list[i]]
                         }
@@ -61,18 +179,21 @@ dtavm.proxy_start = function proxy_start() {
                     return proxy_res
                 }
             }
+            if (unhook_func_list.includes(WatchName)){
+                return result;
+            }
             // 单次代理
             if (dtavm.proxy_map.hasOwnProperty(WatchName)) {
                 return dtavm.proxy_map[WatchName]
             }
             proxy_res = new Proxy(result, handler)
 
-            if(WatchName.includes("contentWindow_")){
+            if (WatchName.includes("contentWindow_")) {
                 if (dtavm.iframe_proxy_map.hasOwnProperty(WatchName)) {
                     return dtavm.iframe_proxy_map[WatchName]
                 }
                 dtavm.iframe_proxy_map[WatchName] = proxy_res
-            }else{
+            } else {
                 dtavm.proxy_map[WatchName] = proxy_res
             }
             return proxy_res
@@ -85,10 +206,10 @@ dtavm.proxy_start = function proxy_start() {
                 var split_name_list = getSubstrings(split_name).splice(1)
                 for (let i = 0; i < split_name_list.length; i++) {
                     var name;
-                    if (split_name_list[i].includes("window")){
-                        name = split_name[0]+"."+split_name_list[i]
-                    }else{
-                        name = split_name[0]+".window."+split_name_list[i]
+                    if (split_name_list[i].includes("window")) {
+                        name = split_name[0] + "." + split_name_list[i]
+                    } else {
+                        name = split_name[0] + ".window." + split_name_list[i]
                     }
                     if (dtavm.iframe_proxy_map.hasOwnProperty(name)) {
                         return dtavm.iframe_proxy_map[name]
@@ -110,13 +231,20 @@ dtavm.proxy_start = function proxy_start() {
                     if (this.target_obj) {
                         thisArg = this.target_obj
                     }
-                    try{
+                    var err;
+                    try {
                         var result = Reflect.apply(target, thisArg, argArray)
-                    }catch(e){
+                    } catch (e) {
                         dtavm.log(`[${WatchName}] apply function name is [${target.name}], argArray is `, argArray, `error is `, e);
-                        throw e;
+                        err = e;
                     }
-                    
+                    if (!!target.name) {
+                        dtavm.log_env("func", WatchName, target.name)
+                    }
+                    if (err) {
+                        throw err;
+                    }
+
                     if (target.name !== "toString") {
                         if (WatchName === "window.console") {
                         }
@@ -136,11 +264,18 @@ dtavm.proxy_start = function proxy_start() {
                     return result
                 },
                 construct(target, argArray, newTarget) {
-                    try{
+                    var err;
+                    try {
                         var result = Reflect.construct(target, argArray, newTarget)
-                    }catch(e){
+                    } catch (e) {
                         dtavm.log(`[${WatchName}] construct function name is [${target.name}], argArray is `, argArray, `error is `, e);
-                        throw e;
+                        err = e;
+                    }
+                    if (!!target.name) {
+                        dtavm.log_env("func", WatchName, target.name)
+                    }
+                    if (err) {
+                        throw err;
                     }
                     dtavm.log(`[${WatchName}] construct function name is [${target.name}], argArray is `, argArray, `result is `, result);
                     return result;
@@ -170,37 +305,98 @@ dtavm.proxy_start = function proxy_start() {
                     //     }
                     //     return result
                     // }
-                    // // 确保 document.location == window.location = true
-                    if ((WatchName === "window" || WatchName === "document") && propKey === "location"){
-                        result = dtavm.proxy_map["location"]
+                    if ((WatchName.includes("window") || WatchName.includes("globalThis")
+                        || WatchName.includes("self") || WatchName.includes("top")
+                        || WatchName.includes("frames") || WatchName.includes("parent")) &&
+                        (propKey === "globalThis" || propKey === "self" || propKey === "top"
+                            || propKey === "frames" || propKey === "parent" || propKey === "window")) {
+                        if (WatchName.includes(".")){
+                            var split_name = WatchName.split(".")
+                            if (split_name.slice(0, split_name.length - 1).every((value)=>{
+                                return value === "window" || value === "globalThis" || value === "self"
+                                    || value === "top" || value === "frames" || value === "parent";
+                            })){
+                                var last_name = split_name[split_name.length - 1]
+                                if (last_name === "window" || last_name === "globalThis" || last_name === "self"
+                                    || last_name === "top" || last_name === "frames" || last_name === "parent"){
+                                    result = dtavm.proxy_map["window"]
+                                }
+                            }else{
+                                result = target[propKey]
+                            }
+                        }else {
+                            result = dtavm.proxy_map["window"]
+                        }
+                        dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
+                        dtavm.log_env("get", WatchName, propKey, result)
+                        return result
+                    }
+                    else if ((WatchName.includes("window") || WatchName.includes("document") || WatchName.includes("globalThis")
+                        || WatchName.includes("self") || WatchName.includes("top")
+                        || WatchName.includes("frames") || WatchName.includes("parent")) && propKey === "location") {
+                        // 处理这种情况window.window.location
+                        // 当WatchName含有.的时候 split成数组 并且判断是否都为window 或者最后一个是document前面都是window
+                        if (WatchName.includes(".")){
+                            var split_name = WatchName.split(".")
+                            if (split_name.slice(0, split_name.length - 1).every((value)=>{
+                                return value === "window" || value === "globalThis" || value === "self"
+                                    || value === "top" || value === "frames" || value === "parent";
+                            })){
+                                var last_name = split_name[split_name.length - 1]
+                                if (last_name === "window" || last_name === "document"
+                                    || last_name === "globalThis" || last_name === "self"
+                                    || last_name === "top" || last_name === "frames" || last_name === "parent"){
+                                    result = dtavm.proxy_map["location"]
+                                }
+                            }else{
+                                result = target[propKey]
+                            }
+                        }else {
+                            result = dtavm.proxy_map["location"]
+                        }
+                        dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
+                        dtavm.log_env("get", WatchName, propKey, result)
+                        return result
+                    }
+                    var propKeyname = typeof propKey == "symbol" ? propKey.toString() : propKey
+                    result = target[propKey]
+                    if (WatchName === "window" && unhook_func_list.includes(propKey)){
+                        if (typeof result == "function"){
+                            return result.bind(window_jyl);
+                        }
+                        return result;
+                    }
+                    dtavm.log_env("get", WatchName, propKey, result)
+                    if (WatchName === "document" && propKey === "all") {
                         dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
                         return result
                     }
-                    result = target[propKey]
                     if (result instanceof Object) {
                         if (typeof result === "function") {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `] , it is function`)
-                            return check_proxy(`${WatchName}.${propKey}`, result, getMethodHandler(WatchName, target))
+                            return check_proxy(`${WatchName}.${propKeyname}`, result, getMethodHandler(WatchName, target))
                         }
                         else {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
-                            if (propKey == "location" || result instanceof Array){
-                                // 不代理 location 和 Array（因为无法用代理器覆盖他的get方法）
+                            if (propKey == "location" || result instanceof Array 
+                                || result instanceof NodeList || result instanceof HTMLAllCollection 
+                                || result instanceof PluginArray || result instanceof HTMLCollection) {
+                                // 不代理 location 和 类似Array类型例如 NodeList HTMLAllCollection PluginArray（因为无法用代理器覆盖他的get方法）
                                 return result
                             }
                         }
-                        return check_proxy(`${WatchName}.${propKey}`, result, getObjhandler(`${WatchName}.${propKey}`))
+                        return check_proxy(`${WatchName}.${propKeyname}`, result, getObjhandler(`${WatchName}.${propKeyname}`))
                     } else if (WatchName.includes("contentWindow_") || WatchName.includes("contentDocument_")) {
                         // 这里不用instanceof Object 因为iframe里面的Object不同于主环境的Object 会返回false
                         if (typeof result == "object") {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
-                            if (!result || propKey=="location" || result instanceof Array) {
+                            if (!result || propKey == "location" || result instanceof Array) {
                                 return result;
                             }
-                            return check_iframe_proxy(`${WatchName}.${propKey}`, result, getObjhandler(`${WatchName}.${propKey}`))
+                            return check_iframe_proxy(`${WatchName}.${propKeyname}`, result, getObjhandler(`${WatchName}.${propKeyname}`))
                         } else if (typeof result == "function") {
                             dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `] , it is function`)
-                            return check_iframe_proxy(`${WatchName}.${propKey}`, result, getMethodHandler(WatchName, target))
+                            return check_iframe_proxy(`${WatchName}.${propKeyname}`, result, getMethodHandler(WatchName, target))
                         }
                     }
                     dtavm.log(`[${WatchName}] getting propKey is [`, propKey, `], result is [`, result, `]`);
@@ -213,16 +409,22 @@ dtavm.proxy_start = function proxy_start() {
                         dtavm.log(`[${WatchName}] setting propKey is [`, propKey, `], value is [`, value, `]`);
                     }
                     try {
-                        var result = Reflect.set(target, propKey, value, receiver);
-                        return result;
+                        Reflect.set(target, propKey, value, receiver);
                     } catch (e) {
                         target[propKey] = value;
-                        return value;
                     }
+                    //dtavm.log_env("set", WatchName, propKey, value)
+                    // 如果对象是null, false 会报错trap returned falsish
+                    return true;
                 },
                 has(target, propKey) {
                     var result = Reflect.has(target, propKey);
                     dtavm.log(`[${WatchName}] has propKey [`, propKey, `], result is [`, result, `]`)
+                    if (result) {
+                        dtavm.log_env("get", WatchName, propKey, target[propKey])
+                    } else{
+                        dtavm.log_env("del", WatchName, propKey)
+                    }
                     return result;
                 },
                 deleteProperty(target, propKey) {
@@ -295,7 +497,7 @@ dtavm.iframe_proxy_start = function iframe_proxy_start() {
     defineProperty(HTMLIFrameElement.prototype, "contentWindow", undefined, true, true, undefined, function () {
         var result = dtavm.raw_contentWindow_get.call(this);
         if (!this._name) {
-            this._name = +new Date() + "_" + (Math.random()+"").split(".")[1]
+            this._name = +new Date() + "_" + (Math.random() + "").split(".")[1]
         }
         dtavm.log(`[HTMLIFrameElement.prototype] getting propKey is [contentWindow_${this._name}], value is`, result);
         if (result) {
@@ -307,7 +509,7 @@ dtavm.iframe_proxy_start = function iframe_proxy_start() {
     defineProperty(HTMLIFrameElement.prototype, "contentDocument", undefined, true, true, undefined, function () {
         var result = dtavm.raw_contentDocument_get.call(this);
         if (!this._name) {
-            this._name = +new Date() + "_" + (Math.random()+"").split(".")[1]
+            this._name = +new Date() + "_" + (Math.random() + "").split(".")[1]
         }
         dtavm.log(`[HTMLIFrameElement.prototype] getting propKey is [contentWindow_${this._name}.document], value is`, result);
         if (result) {
@@ -320,12 +522,17 @@ dtavm.iframe_proxy_start = function iframe_proxy_start() {
     dtavm.func_set_native(Object.getOwnPropertyDescriptors(HTMLIFrameElement.prototype)["contentWindow"].get, "contentWindow");
     dtavm.func_set_native(Object.getOwnPropertyDescriptors(HTMLIFrameElement.prototype)["contentDocument"].get, "contentDocument");
 }
-dtavm.function_proxy = function function_proxy() {
+dtavm.function_proxy = function function_proxy(e) {
     // todo hook 这种 new (Function.bind.apply(X, J))
-    let filter_func_list = ["function_proxy", "iframe_proxy_start", "proxy_start", "Function", "eval", "Object", "Array", "Number", "parseFloat", "parseInt", "Boolean", "String", "Symbol", "Date", "Promise", "RegExp", "Error", "AggregateError", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "ArrayBuffer", "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigUint64Array", "BigInt64Array", "DataView", "Map", "BigInt", "Set", "WeakMap", "WeakSet", "Proxy", "FinalizationRegistry", "WeakRef", "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent", "escape", "unescape", "isFinite", "isNaN", "SharedArrayBuffer", "VMError", "Buffer"];
-    const globalFunctions = Reflect.ownKeys(globalThis).filter((key) => {
+    var unhook_func_list;
+    if ((e["config-hook-exclude-func"] || '').trim()){
+        unhook_func_list = (e["config-hook-exclude-func"] || '').trim().split(",");
+    }
+    let filter_func_list = ["Function", "eval", "Object", "Array", "Number", "parseFloat", "parseInt", "Boolean", "String", "Symbol", "Date", "Promise", "RegExp", "Error", "AggregateError", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "ArrayBuffer", "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigUint64Array", "BigInt64Array", "DataView", "Map", "BigInt", "Set", "WeakMap", "WeakSet", "Proxy", "FinalizationRegistry", "WeakRef", "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent", "escape", "unescape", "isFinite", "isNaN", "SharedArrayBuffer", "VMError", "Buffer"];
+    const all_func = Reflect.ownKeys(globalThis)
+    const globalFunctions = all_func.filter((key) => {
         var result = globalThis[key];
-        if (typeof result === 'function' && !filter_func_list.includes(key)) {
+        if (typeof result === 'function' && !filter_func_list.includes(key) && !filter_func_list.includes(unhook_func_list)) {
             eval(`${key}=window.${key}`)
             return key;
         }
@@ -333,3 +540,6 @@ dtavm.function_proxy = function function_proxy() {
     dtavm.log("hook 全局函数列表", globalFunctions)
 
 }
+
+
+// todo 延时注入

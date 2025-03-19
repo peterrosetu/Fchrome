@@ -99,6 +99,10 @@
           - ![screenshot](imgs/function2.png)
           - 效果展示
             - ![screenshot](imgs/function3.png)
+        - #### 插件一键导出调用环境 (实验中)
+          ![screenshot](imgs/output1.png)
+          ![screenshot](imgs/output2.png)
+          ![screenshot](imgs/output3.png) 
         - ### 编译成品
             - [目前只有Win版本](https://github.com/daisixuan/Fchrome/releases)
                 - 便携式
@@ -118,7 +122,7 @@
   - todo
     - ~~js hook的代码制作成chrome插件一键启动！~~
     - ~~直接内置v_jstools的监控避免冲突~~
-    - 一键导出调用的环境 一键补环境 (耗时较久 难肝)
+    - 一键导出调用的环境 一键补环境 (耗时较久) 目前实现对象方式输出 还未加入原型链方式
     - 自定义console.log 并去掉原始的console.log 防止控制台/cdp检测 和 console.log被抹去或被console.clear清掉日志（目前通过js hook方式去实现 暂不更新）
     - 更新其他全局对象监控
 

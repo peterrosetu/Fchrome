@@ -47,15 +47,26 @@
                     <br/>
                     <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-crypto">是否代理crypto</label> 
                     <br/>
+                    <label style="margin-left: 20px"><input type="checkbox" name="proxy-obj" data-key="config-proxy-hook-Intl">是否代理Intl</label> 
+                    <br/>
 
                   <label ><input type="checkbox" data-key="config-iframe-proxy-hook">是否开启iframe代理（目前只能hook iframe.contentWindow和iframe.contentDocument iframe里面的对象hook还没实现）</label> 
                   <br/>
                   <label ><input type="checkbox" data-key="config-function-proxy-hook">是否开启全局function代理</label> 
                   <br/>
+
+                    <div style="margin-left: 20px">
+                      <label >输入不需要hook的全局函数，多个函数用英文逗号分开(,)</label> 
+                    </div>
+                    <div style="margin-left: 20px">
+                      <input style="width: 98%" type="text" data-key="config-hook-exclude-func">
+                    </div>
+
+
                   <label ><input type="checkbox" data-key="config-hook-console">hook-console（使用 dtavm.log 替换 console.log 并将 console 的属性都设置为空函数）</label> 
                   <br/>
 
-                  <label ><input type="checkbox" data-key="config-hook-random">是否启用启用下面四种调试功能（用于固定随机性，便于对比调试）</label> 
+                  <label ><input type="checkbox" data-key="config-hook-random">是否启用启用下面三种调试功能（用于固定随机性，便于对比调试）</label> 
                   <br/>
                   <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-random-freeze">config-hook-random（让 random 函数固定返回 0.5）</label> 
                   <br/>
@@ -72,7 +83,7 @@
                       此处的配置会影响后面的全部挂钩操作
                     </div>
                     <div style="margin: 1px">
-                      <label >通过正则匹配URL实现日志输出仅针对你关心的js文件</label> 
+                      <label >通过正则匹配URL 实现日志输出/导出调用环境 仅针对你关心的js文件</label> 
                     </div>
                     <div style="margin: 1px">
                       <input style="width: 98%" type="text" data-key="config-hook-regexp-url">
@@ -93,6 +104,7 @@
                   <br/>
                   <label style="margin-left: 20px"><input type="checkbox" data-key="config-hook-domobj-func">hook-domobj-显示func输出</label>
                   <br/>
+                  <label ><input type="checkbox" data-key="config-log-hook">是否启用调用记录（存储对象/函数调用记录）</label>
             </div>
             <HR>
             <div>左侧两列为常用挂钩，建议常开</div>

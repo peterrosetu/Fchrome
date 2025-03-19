@@ -1,12 +1,12 @@
 console.log("inject proxy start!")
 
 function inject_script(code) {
-  var script = document.createElement("script");
+  var script = document_jyl.createElement("script");
   script.innerHTML = code;
   script.onload = script.onreadystatechange = function () {
     script.onreadystatechange = script.onload = null;
   }
-  var html = document.getElementsByTagName("html")[0];
+  var html = document_jyl.getElementsByTagName("html")[0];
   html.appendChild(script);
   html.removeChild(script);
 }
@@ -45,6 +45,7 @@ function make_domhooker_funcs() {
           var r = _old_get.apply(this, arguments)
           if (e["config-hook-domobj"] && e["config-hook-domobj-get"] && e["config-hook-${obname}-${name}"]){ 
             dtavm.log("[${obname}.prototype.${name} get]", r)
+            dtavm.log_env("prototype", "${obname}", "${name}", r, "get")
           }
           return r 
         }
@@ -53,6 +54,7 @@ function make_domhooker_funcs() {
           var _new_set = function set(v){
             if (e["config-hook-domobj"] && e["config-hook-domobj-set"] && e["config-hook-${obname}-${name}"]){ 
               dtavm.log("[${obname}.prototype.${name} set]", v)
+              dtavm.log_env("prototype", "${obname}", "${name}", v, "set")
             }
             return _old_set.apply(this, arguments) 
           }
@@ -79,6 +81,7 @@ function make_domhooker_funcs() {
           }
           if (e["config-hook-domobj"] && e["config-hook-domobj-func"] && e["config-hook-${obname}-${name}"]){ 
             dtavm.log("[${obname}.prototype.${name} func]", origslice.call(arguments), '===>', err ? '[ERROR]' : r)
+            dtavm.log_env("prototype", "${obname}", "${name}", r, "func")
           }
           if (err){
             throw err;
@@ -120,11 +123,14 @@ var hookers = [
   "config-proxy-hook-performance",
   "config-proxy-hook-indexedDB",
   "config-proxy-hook-crypto",
+  "config-proxy-hook-Intl",
   "config-hook-regexp-url",
   "config-hook-domobj",
   "config-hook-domobj-get",
   "config-hook-domobj-set",
   "config-hook-domobj-func",
+  "config-log-hook",
+  "config-hook-exclude-func"
 ]
 
 function add_config_hook(input) {
@@ -141,9 +147,9 @@ function injectfunc(e, window) {
   var dta_stringify = JSON.stringify
   var dta_Error = Error
   var origslice = [].slice
-
   if ((e["config-hook-regexp-url"] || '').trim()) {
-    console.log('[*] 配置了只收集对某个js路径才输出的配置（如出现控制台不输出hook，注意配置该项为空）:', e["config-hook-regexp-url"])
+    console.log('[*] 配置了只收集对某个js路径才输出的配置:', e["config-hook-regexp-url"])
+    // todo 改成匹配多个js文件打印
     var expurl = RegExp((e["config-hook-regexp-url"] || '').trim())
     RegExp.prototype.dta_test = RegExp.prototype.test
     String.prototype.dta_split = String.prototype.split
@@ -168,6 +174,7 @@ function injectfunc(e, window) {
     performance: e["config-proxy-hook-performance"] ? dtavm.proxy(performance_jyl, "performance") : performance_jyl,
     indexedDB: e["config-proxy-hook-indexedDB"] ? dtavm.proxy(indexedDB_jyl, "indexedDB") : indexedDB_jyl,
     crypto: e["config-proxy-hook-crypto"] ? dtavm.proxy(crypto_jyl, "crypto") : crypto_jyl,
+    Intl: e["config-proxy-hook-Intl"] ? dtavm.proxy_map.window.Intl : Intl,
   }
 
   if (e["config-hook-console"]) {
@@ -224,6 +231,7 @@ function injectfunc(e, window) {
       }
       dtavm.func_set_native(JSON.parse)
     }
+  }
     if (e["config-hook-JSON.stringify"]) {
       JSON.stringify = function stringify() {
         var res = dta_stringify.apply(this, arguments)
@@ -239,7 +247,7 @@ function injectfunc(e, window) {
       $domobj_placeholder
     }
 
-    globalThis = dtavm.proxy(window_jyl, "globalThis")
+    globalThis = dtavm.proxy_map["window"]
     Object.defineProperties(globalThis, {
       'window': {
         configurable: false,
@@ -373,6 +381,12 @@ function injectfunc(e, window) {
         },
         set: undefined
       },
+      'Intl': {
+        configurable: true,
+        enumerable: false,
+        value: dtavm.proxy_map["Intl"],
+        writable: true
+      },
     })
 
     dtavm.func_set_native(Object.getOwnPropertyDescriptors(globalThis)["window"].get, "get window");
@@ -408,26 +422,231 @@ function injectfunc(e, window) {
 
   }
 
+
+
+async function copy_env(env){
+  class ClipboardUtils {
+    /**
+     * 方法1: 使用 Clipboard API (最新最推荐)
+     * @param {string} text - 要复制的文本
+     * @returns {Promise<void>}
+     */
+    static async copyWithClipboardAPI(text) {
+      try {
+        await navigator_jyl.clipboard.writeText(text);
+        return true;
+      } catch (err) {
+        console.error('Failed to copy text:', err);
+        return false;
+      }
+    }
+  
+    /**
+     * 方法2: 使用 execCommand (兼容旧浏览器)
+     * @param {string} text - 要复制的文本
+     * @returns {boolean} - 是否复制成功
+     */
+    static copyWithExecCommand(text) {
+      try {
+        // 创建临时文本区域
+        const textArea = document_jyl.createElement('textarea');
+        textArea.value = text;
+        
+        // 将文本区域添加到文档中
+        document_jyl.body.appendChild(textArea);
+        
+        // 选中文本
+        textArea.select();
+        
+        // 尝试复制
+        const success = document_jyl.execCommand('copy');
+        
+        // 清理
+        document_jyl.body.removeChild(textArea);
+        
+        return success;
+      } catch (err) {
+        dtavm.log('Failed to copy text:', err);
+        return false;
+      }
+    }
+  
+    /**
+     * 方法3: 使用 Clipboard API 的异步剪贴板访问
+     * @param {string} text - 要复制的文本
+     * @param {string} mimeType - MIME类型，默认为 'text/plain'
+     * @returns {Promise<void>}
+     */
+    static async copyWithClipboardItem(text, mimeType = 'text/plain') {
+      try {
+        const blob = new Blob([text], { type: mimeType });
+        const data = new ClipboardItem({
+          [mimeType]: blob
+        });
+        await navigator_jyl.clipboard.write([data]);
+        return true;
+      } catch (err) {
+        dtavm.log('Failed to copy text:', err);
+        return false;
+      }
+    }
+  
+    /**
+     * 组合方法：尝试所有可用的复制方法
+     * @param {string} text - 要复制的文本
+     * @returns {Promise<boolean>} - 是否复制成功
+     */
+    static async copy(text) {
+      // 首先尝试现代的 Clipboard API
+      if (navigator_jyl.clipboard) {
+        try {
+          await this.copyWithClipboardAPI(text);
+          window_jyl.alert('已将代码存放到剪贴板中。');
+          return true;
+        } catch (err) {
+        }
+      }
+  
+      // 如果Clipboard API失败，尝试execCommand
+      var res = this.copyWithExecCommand(text);
+      if (res){
+        window_jyl.alert('已将代码存放到剪贴板中。');
+      }else{
+        dtavm.log(text);
+        window_jyl.alert('保存至剪贴板失败。尝试直接将代码用 dtavm.log 直接输出在控制台中');
+      }
+      return res
+    }
+  }
+  /**
+   * 将对象转换为字符串格式，保持原有的结构和格式
+   * @param {any} value - 要转换的值
+   * @param {Set} visited - 已访问对象的Set，用于避免循环引用
+   * @param {number} indent - 缩进级别
+   * @returns {string} 格式化的字符串
+   */
+  function objectToString(value, visited = new Set(), indent = 0) {
+    function convertSymbolString(str) {
+        return str.replace(/^Symbol\((Symbol\.[^)]+)\)$/, '$1');
+    }
+    // 处理循环引用
+    if (typeof value === 'object' && value !== null) {
+      if (visited.has(value)) {
+        return '[Circular Reference]';
+      }
+      visited.add(value);
+    }
+  
+    // 处理null
+    if (value === null) {
+      return 'null';
+    }
+  
+    // 处理undefined
+    if (value === undefined) {
+      return 'undefined';
+    }
+  
+    // 处理函数
+    if (typeof value === 'function') {
+      // 获取函数的字符串表示，并清理掉多余的换行和空格
+      let fnStr = value.toString().replace(/\s+/g, ' ');
+      // 如果是箭头函数或普通函数，统一转换为简短形式
+      if (fnStr.includes('{')) {
+        return 'function(){}';
+      }
+      return 'function(){}';
+    }
+  
+    // 处理Date对象
+    if (value instanceof Date) {
+      return `new Date('${value.toISOString()}')`;
+    }
+  
+    // 处理RegExp对象
+    if (value instanceof RegExp) {
+      return value.toString();
+    }
+  
+    // 处理数组
+    if (Array.isArray(value)) {
+      const items = value.map(item => objectToString(item, visited, indent + 2));
+      if (items.length === 0) return '[]';
+      return `[\n${' '.repeat(indent + 2)}${items.join(',\n' + ' '.repeat(indent + 2))}\n${' '.repeat(indent)}]`;
+    }
+  
+    // 处理对象
+    if (typeof value === 'object') {
+      const props = [];
+      // 获取所有可枚举的属性，包括Symbol
+      const keys = [...Object.getOwnPropertyNames(value), ...Object.getOwnPropertySymbols(value)];
+  
+      for (const key of keys) {
+        try {
+          const propValue = value[key];
+          // 格式化属性名
+          const formattedKey = typeof key === 'symbol' ?
+            `[${convertSymbolString(key.toString())}]` :
+            /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ?
+              key :
+              `'${key}'`;
+  
+          // 递归处理属性值
+          const formattedValue = objectToString(propValue, visited, indent + 2);
+          props.push(`${formattedKey}: ${formattedValue}`);
+        } catch (error) {
+          // 处理不可访问的属性
+          props.push(`${key}: '[Inaccessible]'`);
+        }
+      }
+  
+      if (props.length === 0) return '{}';
+      return `{\n${' '.repeat(indent + 2)}${props.join(',\n' + ' '.repeat(indent + 2))}\n${' '.repeat(indent)}}`;
+    }
+  
+    // 处理字符串
+    if (typeof value === 'string') {
+      return `'${value.replace(/'/g, "\\'")}'`;
+    }
+  
+    // 处理其他原始类型
+    return String(value);
+  }
+  await ClipboardUtils.copy(objectToString(env));
 }
+
+
+
 var code_hookdom;
 chrome.storage.local.get(hookers, function (result) {
   if (result["config-proxy-hook"]) {
     console.log("启动代理器替换全局对象!")
-    inject_script(dtavm.proxy_start.toString() + "\nproxy_start()")
 
+    // inject_script(dtavm.proxy_start.toString() + `\nproxy_start(${JSON.stringify(result)})`)
+    inject_script(`(${dtavm.proxy_start})(${JSON.stringify(result)})`)
     var replacer_injectfunc = (injectfunc + '').replace('$domobj_placeholder', make_domhooker_funcs())
 
     if (result["config-iframe-proxy-hook"]) {
       console.log("启动iframe代理器!")
-      inject_script(dtavm.iframe_proxy_start.toString() + "\iframe_proxy_start()")
+      // inject_script(dtavm.iframe_proxy_start.toString() + "\niframe_proxy_start()")
+      inject_script(`(${dtavm.iframe_proxy_start})()`)
     }
     inject_script(code_hookdom = `(${replacer_injectfunc})(${JSON.stringify(result)},window)`);
     if (result["config-function-proxy-hook"]) {
       console.log("启动function代理器!")
-      inject_script(dtavm.function_proxy.toString() + "\nfunction_proxy()")
+      // inject_script(dtavm.function_proxy.toString() + "\nfunction_proxy()")
+      inject_script(`(${dtavm.function_proxy})(${JSON.stringify(result)})`)
     }
-
+    inject_script("dtavm.log_env_cache = {}")
+    //inject_script("dtavm.rawclear()")
   } else {
     console.log("不启动代理器替换全局对象!")
   }
 })
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'getenv') {
+    inject_script(copy_env.toString() + "\ncopy_env(dtavm.log_env_cache)")
+    sendResponse({});
+  }
+});
