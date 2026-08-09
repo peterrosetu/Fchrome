@@ -47,7 +47,7 @@
 
     支持免费测试，专属折扣码：**0205**
 
-    官网入口：<u>https://www.ipwo.net/?code=7HMLUH2AP</u>
+    官网入口：[IPWO x Fchrome](https://www.ipwo.net/?code=7HMLUH2AP)
 
     ![IPWO住宅代理](imgs/ipwo_banner.jpg)
 
